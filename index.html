@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico Estratégico — SaaS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#182530;
+    --ink-soft:#4b5a66;
+    --paper:#EEEBE3;
+    --paper-raised:#F8F6F1;
+    --line:#D3CEC2;
+    --accent:#2F6E73;
+    --accent-soft:#DCE9E8;
+    --red:#B4432E;
+    --red-soft:#F3DFD9;
+    --amber:#A9761E;
+    --amber-soft:#F1E5CD;
+    --green:#3C7A4E;
+    --green-soft:#DCEADF;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    padding-bottom:80px;
+  }
+  h1,h2,h3{font-family:'Source Serif 4',serif; margin:0; color:var(--ink);}
+
+  /* header */
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding:14px 18px 12px;
+  }
+  .topbar-row{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .eyebrow{font-size:11px; letter-spacing:.03em; color:var(--accent); font-weight:500;}
+  .title{font-size:21px; font-weight:600; margin-top:2px;}
+  .save-status{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    max-width:150px; justify-content:flex-end; text-align:right;
+  }
+  .save-dot{width:6px;height:6px;border-radius:50%;background:var(--green); transition:background .2s;}
+  .save-dot.saving{background:var(--amber);}
+  .save-dot.error{background:var(--red);}
+  .retry-btn{
+    border:none; background:none; color:var(--accent); font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px; text-decoration:underline; cursor:pointer; padding:0;
+  }
+  .backup-btn{
+    display:inline-block; margin-top:10px; border:1px solid var(--line); background:var(--paper-raised);
+    color:var(--ink-soft); font-size:11px; padding:6px 10px; border-radius:20px; cursor:pointer;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .backup-btn:hover{border-color:var(--accent); color:var(--accent);}
+  .report-btn{
+    display:inline-block; margin-top:10px; margin-left:8px; border:1px solid var(--accent); background:var(--accent);
+    color:#fff; font-size:11px; padding:6px 12px; border-radius:20px; cursor:pointer;
+    font-family:'IBM Plex Sans',sans-serif; font-weight:500;
+  }
+  .report-btn:hover{opacity:.9;}
+
+  /* ---------- relatório de impressão ---------- */
+  #printReport{display:none;}
+  .pr-header{margin-bottom:22px; border-bottom:2px solid var(--ink); padding-bottom:14px;}
+  .pr-eyebrow{font-size:11px; letter-spacing:.05em; color:var(--accent); font-weight:600; font-family:'IBM Plex Sans',sans-serif;}
+  .pr-header h1{font-size:26px; margin:4px 0 6px;}
+  .pr-meta{font-size:12px; color:var(--ink-soft); font-family:'IBM Plex Sans',sans-serif;}
+  .pr-score{
+    display:flex; align-items:center; gap:20px; border:1px solid var(--line); border-radius:6px;
+    padding:16px 18px; margin-bottom:24px; background:var(--paper-raised); break-inside:avoid;
+  }
+  .pr-score-number{font-family:'Source Serif 4',serif; font-size:40px; font-weight:700; color:var(--ink); line-height:1;}
+  .pr-score-number span{font-size:14px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; font-weight:400;}
+  .pr-score-info{flex:1;}
+  .pr-score-label{font-size:15px; font-weight:600; margin-bottom:4px;}
+  .pr-score-label.crit{color:var(--red);}
+  .pr-score-label.atn{color:var(--amber);}
+  .pr-score-label.ok{color:var(--green);}
+  .pr-score-desc{font-size:12px; color:var(--ink-soft);}
+  .pr-pillars-mini{margin-top:8px; display:flex; flex-wrap:wrap; gap:4px 20px;}
+  .pr-pillar-mini{width:190px; font-size:11px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; display:flex; justify-content:space-between;}
+  .pr-pillar-mini b{color:var(--ink); font-family:'IBM Plex Sans',sans-serif; font-weight:500;}
+  #printReport h2{
+    font-size:16px; font-family:'Source Serif 4',serif; color:var(--ink); margin:26px 0 10px;
+    border-bottom:1px solid var(--line); padding-bottom:6px; break-after:avoid;
+  }
+  .pr-table{width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:6px;}
+  .pr-table th{
+    text-align:left; background:var(--ink); color:#fff; padding:7px 9px; font-size:11px;
+    font-family:'IBM Plex Sans',sans-serif; font-weight:500;
+  }
+  .pr-table td{padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:top;}
+  .pr-tag{display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; white-space:nowrap;}
+  .pr-tag.critico{background:var(--red-soft); color:var(--red);}
+  .pr-tag.importante{background:var(--amber-soft); color:var(--amber);}
+  .pr-tag.oportunidade{background:var(--green-soft); color:var(--green);}
+  .pr-empty{font-size:12px; color:var(--ink-soft); font-style:italic;}
+  .pr-plan-grid{display:flex; gap:12px;}
+  .pr-plan-col{flex:1; min-width:0;}
+  .pr-plan-col h3{font-size:12.5px; color:var(--accent); margin:0 0 8px; font-family:'IBM Plex Sans',sans-serif;}
+  .pr-plan-col ul{margin:0; padding-left:16px; font-size:12px;}
+  .pr-plan-col li{margin-bottom:6px;}
+  .pr-summary-block{margin-bottom:14px; break-inside:avoid;}
+  .pr-summary-block h4{font-size:12.5px; color:var(--accent); margin:0 0 4px; font-family:'IBM Plex Sans',sans-serif;}
+  .pr-summary-block p{font-size:12.5px; margin:0; white-space:pre-wrap;}
+  .pr-footer{margin-top:30px; font-size:10.5px; color:var(--ink-soft); text-align:center;}
+
+  @media print{
+    body *{visibility:hidden;}
+    #printReport, #printReport *{visibility:visible;}
+    #printReport{display:block; position:absolute; top:0; left:0; width:100%; padding:0;}
+    @page{margin:16mm;}
+  }
+  .progress-track{height:3px; background:var(--line); margin-top:12px; border-radius:2px; overflow:hidden;}
+  .progress-fill{height:100%; background:var(--accent); width:0%; transition:width .3s ease;}
+
+  .wrap{max-width:640px; margin:0 auto; padding:0 16px;}
+
+  /* score card */
+  .score-card{
+    max-width:640px; margin:16px auto 0; padding:16px;
+    background:var(--paper-raised); border:1px solid var(--line); border-radius:6px;
+  }
+  .score-card.empty{display:flex; align-items:center; gap:10px; color:var(--ink-soft); font-size:13px; font-style:italic;}
+  .score-top{display:flex; align-items:center; gap:16px;}
+  .score-number-wrap{position:relative; width:76px; height:76px; flex:none;}
+  .score-number-wrap svg{transform:rotate(-90deg);}
+  .score-ring-bg{fill:none; stroke:var(--line); stroke-width:7;}
+  .score-ring-fg{fill:none; stroke:var(--accent); stroke-width:7; stroke-linecap:round; transition:stroke-dasharray .4s ease, stroke .3s ease;}
+  .score-number{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .score-number .num{font-family:'Source Serif 4',serif; font-size:24px; font-weight:600; line-height:1;}
+  .score-number .of100{font-size:9px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+  .score-meta{flex:1;}
+  .score-label{font-size:14px; font-weight:600; margin-bottom:2px;}
+  .score-label.crit{color:var(--red);}
+  .score-label.atn{color:var(--amber);}
+  .score-label.ok{color:var(--green);}
+  .score-desc{font-size:12px; color:var(--ink-soft); line-height:1.4;}
+  .score-pillars{margin-top:14px; padding-top:12px; border-top:1px solid var(--line);}
+  .pillar-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .pillar-row:last-child{margin-bottom:0;}
+  .pillar-name{font-size:12px; color:var(--ink-soft); width:112px; flex:none;}
+  .pillar-track{flex:1; height:6px; background:var(--line); border-radius:4px; overflow:hidden;}
+  .pillar-fill{height:100%; border-radius:4px; transition:width .3s ease, background .3s ease;}
+  .pillar-value{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); width:34px; text-align:right; flex:none;}
+
+  /* cover */
+  .cover{padding:22px 0 8px;}
+  .cover-field{margin-bottom:14px;}
+  .cover-field label{display:block; font-size:12px; color:var(--ink-soft); margin-bottom:4px;}
+  .cover-grid{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
+  .cover-note{
+    font-size:13px; color:var(--ink-soft); font-style:italic;
+    border-left:2px solid var(--accent); padding-left:12px; margin-top:10px;
+  }
+
+  input[type=text], input[type=number], textarea, select{
+    width:100%;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14.5px;
+    color:var(--ink);
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:9px 10px;
+    outline:none;
+  }
+  input:focus, textarea:focus, select:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+  textarea{resize:vertical; min-height:56px;}
+  .mono-input{font-family:'IBM Plex Mono',monospace;}
+
+  /* sections as accordion */
+  .section{border-top:1px solid var(--line); background:var(--paper);}
+  .section-head{
+    display:flex; align-items:center; gap:12px;
+    padding:16px 0; cursor:pointer; user-select:none;
+  }
+  .section-num{
+    font-family:'Source Serif 4',serif; font-size:26px; color:var(--accent);
+    min-width:34px;
+  }
+  .section-title{flex:1;}
+  .section-title h2{font-size:17px; font-weight:600;}
+  .section-sub{font-size:12px; color:var(--ink-soft); margin-top:1px;}
+  .chevron{
+    width:9px; height:9px; border-right:1.5px solid var(--ink-soft); border-bottom:1.5px solid var(--ink-soft);
+    transform:rotate(45deg); transition:transform .2s; margin-right:4px;
+  }
+  .section.open .chevron{transform:rotate(-135deg);}
+  .section-body{
+    display:none; padding:2px 0 26px;
+  }
+  .section.open .section-body{display:block;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:13px; font-weight:500; color:var(--ink); margin-bottom:2px;}
+  .field .hint{display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; font-style:italic;}
+
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  @media(max-width:420px){.row2{grid-template-columns:1fr;} .cover-grid{grid-template-columns:1fr;}}
+
+  .chip-group{display:flex; flex-wrap:wrap; gap:7px;}
+  .chip{
+    border:1px solid var(--line); background:var(--paper-raised);
+    padding:6px 11px; border-radius:20px; font-size:13px; cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .chip.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+  .scale5{display:flex; gap:6px;}
+  .scale5 .dot{
+    flex:1; text-align:center; padding:8px 0; border:1px solid var(--line);
+    border-radius:var(--radius); cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:13px;
+    color:var(--ink-soft); background:var(--paper-raised);
+  }
+  .scale5 .dot.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+  .yn{display:flex; gap:8px;}
+  .yn .chip{min-width:64px; text-align:center;}
+
+  /* journey */
+  .journey-stage{
+    border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 12px 4px; margin-bottom:12px; background:var(--paper-raised);
+  }
+  .journey-stage h3{font-size:14px; margin-bottom:8px; color:var(--accent);}
+  .journey-stage .field{margin-bottom:10px;}
+  .journey-stage label{font-size:11.5px; color:var(--ink-soft); font-weight:400;}
+  .journey-stage textarea{min-height:42px; font-size:13.5px;}
+
+  /* indicators */
+  .indicator-row{
+    display:grid; grid-template-columns:1fr 90px; gap:10px; align-items:center;
+    padding:9px 0; border-bottom:1px solid var(--line);
+  }
+  .indicator-row:last-child{border-bottom:none;}
+  .indicator-name{font-size:13.5px;}
+  .indicator-unit{font-size:11px; color:var(--ink-soft); display:block;}
+
+  /* diagnosis rows */
+  .diag-row, .action-item{
+    border:1px solid var(--line); border-radius:var(--radius); padding:10px;
+    margin-bottom:8px; background:var(--paper-raised); position:relative;
+  }
+  .diag-row textarea{min-height:38px; font-size:13.5px; margin-bottom:6px;}
+  .priority-picker{display:flex; gap:6px; margin-top:2px;}
+  .priority-btn{
+    flex:1; padding:6px 4px; text-align:center; border-radius:var(--radius);
+    border:1px solid var(--line); cursor:pointer; font-size:12px; background:#fff;
+  }
+  .priority-btn[data-p="critico"].active{background:var(--red-soft); border-color:var(--red); color:var(--red); font-weight:600;}
+  .priority-btn[data-p="importante"].active{background:var(--amber-soft); border-color:var(--amber); color:var(--amber); font-weight:600;}
+  .priority-btn[data-p="oportunidade"].active{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:600;}
+  .remove-btn{
+    position:absolute; top:8px; right:8px; background:none; border:none;
+    color:var(--ink-soft); font-size:16px; cursor:pointer; line-height:1; padding:2px 6px;
+  }
+  .add-btn{
+    width:100%; padding:10px; border:1px dashed var(--line); background:transparent;
+    color:var(--accent); border-radius:var(--radius); font-size:13px; cursor:pointer; font-weight:500;
+  }
+  .legend{font-size:12px; color:var(--ink-soft); margin-bottom:12px; display:flex; flex-wrap:wrap; gap:12px;}
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .legend i{width:8px;height:8px;border-radius:50%; display:inline-block;}
+
+  .plan-col-title{font-size:13px; font-weight:600; color:var(--accent); margin:14px 0 8px;}
+  .action-item input{font-size:13.5px;}
+
+  footer{
+    max-width:640px; margin:20px auto 0; padding:0 16px 24px;
+    font-size:11.5px; color:var(--ink-soft); text-align:center;
+  }
+
+  ::placeholder{color:#9AA3AA;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div>
+      <div class="eyebrow">CONSULTORIA SAAS</div>
+      <div class="title">Diagnóstico Estratégico</div>
+    </div>
+    <div class="save-status">
+      <span class="save-dot" id="saveDot"></span><span id="saveText">carregando…</span>
+      <button type="button" id="retrySave" class="retry-btn" style="display:none;">tentar novamente</button>
+    </div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <button type="button" id="copyBackup" class="backup-btn">📋 Copiar backup</button>
+  <button type="button" id="downloadReport" class="backup-btn">⬇️ Baixar relatório (HTML)</button>
+  <button type="button" id="generateReport" class="report-btn">🖨️ Gerar relatório (nova aba)</button>
+</div>
+
+<div class="score-card" id="scoreCard">
+  <div class="score-top">
+    <div class="score-number-wrap">
+      <svg width="76" height="76" viewBox="0 0 76 76">
+        <circle class="score-ring-bg" cx="38" cy="38" r="32"></circle>
+        <circle class="score-ring-fg" id="scoreRing" cx="38" cy="38" r="32" stroke-dasharray="0 201"></circle>
+      </svg>
+      <div class="score-number"><span class="num" id="scoreNum">–</span><span class="of100">/ 100</span></div>
+    </div>
+    <div class="score-meta">
+      <div class="score-label" id="scoreLabel">Pontuação de saúde</div>
+      <div class="score-desc" id="scoreDesc">Preencha os campos do formulário para calcular a pontuação — quanto mais completo, mais precisa.</div>
+    </div>
+  </div>
+  <div class="score-pillars" id="scorePillars"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="cover">
+    <div class="cover-grid">
+      <div class="cover-field"><label>Empresa / SaaS</label><input type="text" data-field="empresa" placeholder="Nome da empresa"></div>
+      <div class="cover-field"><label>Fundador(a) / Entrevistado(a)</label><input type="text" data-field="fundador"></div>
+      <div class="cover-field"><label>Cargo</label><input type="text" data-field="cargo"></div>
+      <div class="cover-field"><label>Data da reunião</label><input type="text" data-field="data" placeholder="dd/mm/aaaa"></div>
+      <div class="cover-field"><label>Consultor(a) responsável</label><input type="text" data-field="consultor"></div>
+      <div class="cover-field"><label>Tempo de mercado do SaaS</label><input type="text" data-field="tempoMercado" placeholder="ex.: 2 anos"></div>
+    </div>
+    <p class="cover-note">Preencha durante a reunião. Priorize números e percentuais quando disponíveis. Onde o dado não existir, registre "não medido" — isso já é, em si, um achado.</p>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">01</div>
+      <div class="section-title"><h2>Contexto do negócio</h2><div class="section-sub">O que é, para quem, e em que estágio</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="field"><label>O que o SaaS faz?</label><textarea data-field="oQueFaz" placeholder="Descrição em 1–2 frases"></textarea></div>
+      <div class="field"><label>Qual problema o produto resolve?</label><textarea data-field="problemaResolve"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Público-alvo</label><input type="text" data-field="publicoAlvo"></div>
+        <div class="field"><label>Perfil do cliente ideal (ICP)</label><input type="text" data-field="icp"></div>
+      </div>
+      <div class="field"><label>Modelo de negócio</label>
+        <div class="chip-group" data-chipgroup="modeloNegocio" data-single="true">
+          <div class="chip" data-value="Assinatura">Assinatura</div>
+          <div class="chip" data-value="Uso (pay-as-you-go)">Uso</div>
+          <div class="chip" data-value="Híbrido">Híbrido</div>
+          <div class="chip" data-value="Outro">Outro</div>
+        </div>
+      </div>
+      <div class="field"><label>Planos e faixas de preço</label><textarea data-field="planosPrecos" placeholder="ex.: Starter R$99 · Pro R$299 · Enterprise sob consulta"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Faturamento atual (R$/mês)</label><input type="number" class="mono-input" data-field="faturamento"></div>
+        <div class="field"><label>Clientes ativos hoje</label><input type="number" class="mono-input" data-field="numClientes"></div>
+      </div>
+      <div class="field"><label>Meta de crescimento (12 meses)</label><input type="text" data-field="metaCrescimento"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">02</div>
+      <div class="section-title"><h2>Produto e proposta de valor</h2><div class="section-sub">Diferenciação e percepção de valor</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="field"><label>Principal benefício percebido pelo cliente</label><input type="text" data-field="beneficioPrincipal"></div>
+      <div class="field"><label>Diferenciais frente a alternativas do mercado</label><textarea data-field="diferenciais"></textarea></div>
+      <div class="field"><label>Principais concorrentes (diretos e indiretos)</label><input type="text" data-field="concorrentes"></div>
+      <div class="field"><label>Como o cliente percebe o valor entregue hoje?</label>
+        <div class="scale5" data-scale="percepcaoValor">
+          <div class="dot" data-value="1">1</div><div class="dot" data-value="2">2</div><div class="dot" data-value="3">3</div><div class="dot" data-value="4">4</div><div class="dot" data-value="5">5</div>
+        </div>
+      </div>
+      <div class="field"><label>Funcionalidades mais utilizadas / valorizadas</label><textarea data-field="funcionalidades"></textarea></div>
+    </div>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">03</div>
+      <div class="section-title"><h2>Aquisição</h2><div class="section-sub">Como os clientes chegam e convertem</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="field"><label>Como os clientes chegam hoje? (origem principal)</label>
+        <div class="chip-group" data-chipgroup="origemClientes">
+          <div class="chip" data-value="Indicação">Indicação</div>
+          <div class="chip" data-value="Inbound / conteúdo">Inbound / conteúdo</div>
+          <div class="chip" data-value="Outbound">Outbound</div>
+          <div class="chip" data-value="Anúncios pagos">Anúncios pagos</div>
+          <div class="chip" data-value="Parcerias">Parcerias</div>
+        </div>
+      </div>
+      <div class="field"><label>Canais de venda utilizados</label>
+        <div class="chip-group" data-chipgroup="canaisVenda">
+          <div class="chip" data-value="Autoatendimento">Autoatendimento</div>
+          <div class="chip" data-value="Inside sales">Inside sales</div>
+          <div class="chip" data-value="Vendas de campo">Vendas de campo</div>
+          <div class="chip" data-value="Parceiros / revenda">Parceiros / revenda</div>
+        </div>
+      </div>
+      <div class="field"><label>Processo comercial, do lead ao fechamento</label><textarea data-field="processoComercial"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Taxa de conversão (lead → cliente)</label><input type="number" class="mono-input" data-field="taxaConversaoComercial" placeholder="%"></div>
+        <div class="field"><label>CAC conhecido (R$)</label><input type="number" class="mono-input" data-field="cac"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">04</div>
+      <div class="section-title"><h2>Jornada do cliente</h2><div class="section-sub">Descoberta → Renovação, etapa a etapa</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body" id="journeyBody"></div>
+  </div>
+
+  <!-- SECTION 5 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">05</div>
+      <div class="section-title"><h2>Churn e retenção</h2><div class="section-sub">Por que os clientes saem</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="row2">
+        <div class="field"><label>Cancelamentos (últimos meses)</label><input type="number" class="mono-input" data-field="cancelamentos"></div>
+        <div class="field"><label>Taxa de churn atual (%)</label><input type="number" class="mono-input" data-field="taxaChurn"></div>
+      </div>
+      <div class="field"><label>Principais motivos de cancelamento</label><textarea data-field="motivosCancelamento"></textarea></div>
+      <div class="field"><label>Tempo médio até o cliente cancelar (meses)</label><input type="number" class="mono-input" data-field="tempoMedioCancelamento"></div>
+      <div class="field"><label>Como o cancelamento é tratado hoje pela equipe?</label><textarea data-field="tratamentoCancelamento"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Existe tentativa estruturada de retenção?</label>
+          <div class="chip-group yn" data-chipgroup="tentativaRetencao" data-single="true"><div class="chip" data-value="Sim">Sim</div><div class="chip" data-value="Não">Não</div></div>
+        </div>
+        <div class="field"><label>Existe pesquisa de satisfação / NPS?</label>
+          <div class="chip-group yn" data-chipgroup="pesquisaNPS" data-single="true"><div class="chip" data-value="Sim">Sim</div><div class="chip" data-value="Não">Não</div></div>
+        </div>
+      </div>
+      <div class="field"><label>Feedbacks mais frequentes dos clientes</label><textarea data-field="feedbackClientes"></textarea></div>
+    </div>
+  </div>
+
+  <!-- SECTION 6 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">06</div>
+      <div class="section-title"><h2>Onboarding</h2><div class="section-sub">Da compra ao primeiro valor</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="field"><label>Como o cliente começa a usar o produto?</label><textarea data-field="comoComeca"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Existe treinamento ou tutorial estruturado?</label>
+          <div class="chip-group yn" data-chipgroup="treinamento" data-single="true"><div class="chip" data-value="Sim">Sim</div><div class="chip" data-value="Não">Não</div></div>
+        </div>
+        <div class="field"><label>Acompanhamento ativo nos primeiros dias?</label>
+          <div class="chip-group yn" data-chipgroup="acompanhamento" data-single="true"><div class="chip" data-value="Sim">Sim</div><div class="chip" data-value="Não">Não</div></div>
+        </div>
+      </div>
+      <div class="field"><label>Tempo até o primeiro valor real (dias)</label><input type="number" class="mono-input" data-field="tempoPrimeiroValor"></div>
+      <div class="field"><label>Principais dificuldades de novos clientes</label><textarea data-field="dificuldadesOnboarding"></textarea></div>
+    </div>
+  </div>
+
+  <!-- SECTION 7 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">07</div>
+      <div class="section-title"><h2>Suporte e operação</h2><div class="section-sub">Atendimento e processos</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="field"><label>Canais de atendimento disponíveis</label>
+        <div class="chip-group" data-chipgroup="canaisAtendimento">
+          <div class="chip" data-value="E-mail">E-mail</div>
+          <div class="chip" data-value="Chat">Chat</div>
+          <div class="chip" data-value="WhatsApp">WhatsApp</div>
+          <div class="chip" data-value="Telefone">Telefone</div>
+          <div class="chip" data-value="Help desk / ticket">Help desk / ticket</div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Tempo médio de resposta (horas)</label><input type="number" class="mono-input" data-field="tempoResposta"></div>
+        <div class="field"><label>Responsáveis pelo suporte</label><input type="text" data-field="responsaveisSuporte"></div>
+      </div>
+      <div class="field"><label>Principais problemas relatados ao suporte</label><textarea data-field="problemasSuporte"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Processos formais de atendimento?</label>
+          <div class="chip-group yn" data-chipgroup="processosFormais" data-single="true"><div class="chip" data-value="Sim">Sim</div><div class="chip" data-value="Não">Não</div></div>
+        </div>
+        <div class="field"><label>SLA definido e monitorado?</label>
+          <div class="chip-group yn" data-chipgroup="sla" data-single="true"><div class="chip" data-value="Sim">Sim</div><div class="chip" data-value="Não">Não</div></div>
+        </div>
+      </div>
+      <div class="field"><label>Existe base de conhecimento (help center, FAQ, docs)?</label>
+        <div class="chip-group yn" data-chipgroup="baseConhecimento" data-single="true"><div class="chip" data-value="Sim">Sim</div><div class="chip" data-value="Não">Não</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 8 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">08</div>
+      <div class="section-title"><h2>Indicadores</h2><div class="section-sub">O que existe hoje — e o que falta medir</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body" id="indicatorsBody"></div>
+  </div>
+
+  <!-- SECTION 9 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">09</div>
+      <div class="section-title"><h2>Diagnóstico</h2><div class="section-sub">Classificar os problemas encontrados</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="legend">
+        <span><i style="background:var(--red)"></i>Crítico — risco imediato</span>
+        <span><i style="background:var(--amber)"></i>Importante — impacta crescimento</span>
+        <span><i style="background:var(--green)"></i>Oportunidade — melhoria de médio prazo</span>
+      </div>
+      <div id="diagRows"></div>
+      <button class="add-btn" id="addDiagRow" type="button">+ Adicionar problema</button>
+    </div>
+  </div>
+
+  <!-- SECTION 10 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">10</div>
+      <div class="section-title"><h2>Plano de ação</h2><div class="section-sub">0–30 · 31–60 · 61–90 dias</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="plan-col-title">0–30 dias</div>
+      <div id="plan0" class="plan-list"></div>
+      <button class="add-btn" data-plan="0" type="button">+ Adicionar ação</button>
+      <div class="plan-col-title">31–60 dias</div>
+      <div id="plan1" class="plan-list"></div>
+      <button class="add-btn" data-plan="1" type="button">+ Adicionar ação</button>
+      <div class="plan-col-title">61–90 dias</div>
+      <div id="plan2" class="plan-list"></div>
+      <button class="add-btn" data-plan="2" type="button">+ Adicionar ação</button>
+    </div>
+  </div>
+
+  <!-- SECTION 11 -->
+  <div class="section" data-section>
+    <div class="section-head" data-toggle>
+      <div class="section-num">11</div>
+      <div class="section-title"><h2>Resumo do diagnóstico</h2><div class="section-sub">Síntese final da consultoria</div></div>
+      <div class="chevron"></div>
+    </div>
+    <div class="section-body">
+      <div class="field"><label>Principais problemas</label><textarea data-field="resumoProblemas"></textarea></div>
+      <div class="field"><label>Possíveis causas</label><textarea data-field="resumoCausas"></textarea></div>
+      <div class="field"><label>Impacto no negócio</label><textarea data-field="resumoImpacto"></textarea></div>
+      <div class="field"><label>Prioridade geral</label>
+        <div class="chip-group" data-chipgroup="resumoPrioridade" data-single="true">
+          <div class="chip" data-value="Crítico">🔴 Crítico</div>
+          <div class="chip" data-value="Importante">🟡 Importante</div>
+          <div class="chip" data-value="Oportunidade">🟢 Oportunidade</div>
+        </div>
+      </div>
+      <div class="field"><label>Recomendações iniciais</label><textarea data-field="resumoRecomendacoes"></textarea></div>
+      <div class="field"><label>Próximos passos</label><textarea data-field="resumoProximosPassos"></textarea></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Os dados ficam salvos automaticamente neste dispositivo, associados à sua conta.</footer>
+
+<script>
+(function(){
+  const STORAGE_KEY = "diagnostico-saas-form";
+  const journeyStages = ["Descoberta","Demonstração / Teste","Compra","Onboarding","Primeiro valor","Uso recorrente","Suporte","Renovação"];
+  const indicators = [
+    ["mrr","MRR — Receita Recorrente Mensal","R$"],
+    ["ticketMedio","Ticket médio","R$"],
+    ["churnPct","Churn mensal","%"],
+    ["cacInd","CAC","R$"],
+    ["ltv","LTV","R$"],
+    ["clientesAtivos","Clientes ativos","nº"],
+    ["novosClientesMes","Novos clientes / mês","nº"],
+    ["receitaPerdida","Receita perdida por churn / mês","R$"],
+    ["taxaConversaoInd","Taxa de conversão (lead → cliente)","%"],
+    ["taxaAtivacao","Taxa de ativação","%"]
+  ];
+
+  let state = {
+    journey:{}, diagRows:[], plan:[[],[],[]]
+  };
+
+  // ---------- build journey ----------
+  const journeyBody = document.getElementById("journeyBody");
+  journeyStages.forEach(stage=>{
+    const div = document.createElement("div");
+    div.className = "journey-stage";
+    div.innerHTML = `<h3>${stage}</h3>
+      <div class="field"><label>Problemas identificados</label><textarea data-journey="${stage}" data-jfield="problemas"></textarea></div>
+      <div class="field"><label>Gargalos</label><textarea data-journey="${stage}" data-jfield="gargalos"></textarea></div>
+      <div class="field"><label>Oportunidades</label><textarea data-journey="${stage}" data-jfield="oportunidades"></textarea></div>`;
+    journeyBody.appendChild(div);
+  });
+
+  // ---------- build indicators ----------
+  const indicatorsBody = document.getElementById("indicatorsBody");
+  indicators.forEach(([id,name,unit])=>{
+    const row = document.createElement("div");
+    row.className = "indicator-row";
+    row.innerHTML = `<div class="indicator-name">${name}<span class="indicator-unit">${unit}</span></div>
+      <input type="number" class="mono-input" data-field="ind_${id}">`;
+    indicatorsBody.appendChild(row);
+  });
+
+  // ---------- diagnosis rows ----------
+  const diagRowsEl = document.getElementById("diagRows");
+  function renderDiagRow(rowData, idx){
+    const div = document.createElement("div");
+    div.className = "diag-row";
+    div.dataset.idx = idx;
+    div.innerHTML = `
+      <button type="button" class="remove-btn" data-remove-diag="${idx}">×</button>
+      <textarea placeholder="Problema identificado" data-diag="${idx}" data-dfield="problema">${rowData.problema||""}</textarea>
+      <textarea placeholder="Onde foi observado (jornada / área)" data-diag="${idx}" data-dfield="onde">${rowData.onde||""}</textarea>
+      <div class="priority-picker">
+        <div class="priority-btn ${rowData.prioridade==='critico'?'active':''}" data-p="critico" data-diagp="${idx}">🔴 Crítico</div>
+        <div class="priority-btn ${rowData.prioridade==='importante'?'active':''}" data-p="importante" data-diagp="${idx}">🟡 Importante</div>
+        <div class="priority-btn ${rowData.prioridade==='oportunidade'?'active':''}" data-p="oportunidade" data-diagp="${idx}">🟢 Oportunidade</div>
+      </div>`;
+    diagRowsEl.appendChild(div);
+  }
+  function rebuildDiagRows(){
+    diagRowsEl.innerHTML = "";
+    state.diagRows.forEach((r,i)=>renderDiagRow(r,i));
+  }
+  document.getElementById("addDiagRow").addEventListener("click", ()=>{
+    state.diagRows.push({problema:"",onde:"",prioridade:null});
+    rebuildDiagRows();
+    scheduleSave();
+  });
+  diagRowsEl.addEventListener("input", (e)=>{
+    const t = e.target;
+    if(t.dataset.diag !== undefined){
+      state.diagRows[+t.dataset.diag][t.dataset.dfield] = t.value;
+      scheduleSave();
+    }
+  });
+  diagRowsEl.addEventListener("click", (e)=>{
+    const p = e.target.closest("[data-diagp]");
+    if(p){
+      const idx = +p.dataset.diagp;
+      state.diagRows[idx].prioridade = p.dataset.p;
+      rebuildDiagRows();
+      scheduleSave();
+      return;
+    }
+    const rm = e.target.closest("[data-remove-diag]");
+    if(rm){
+      state.diagRows.splice(+rm.dataset.removeDiag,1);
+      rebuildDiagRows();
+      scheduleSave();
+    }
+  });
+
+  // ---------- action plan ----------
+  const planEls = [document.getElementById("plan0"),document.getElementById("plan1"),document.getElementById("plan2")];
+  function renderPlanItem(col, text, idx){
+    const div = document.createElement("div");
+    div.className = "action-item";
+    div.innerHTML = `<button type="button" class="remove-btn" data-remove-plan="${col}:${idx}">×</button>
+      <input type="text" placeholder="Ação" data-plancol="${col}" data-planidx="${idx}" value="${(text||"").replace(/"/g,'&quot;')}">`;
+    planEls[col].appendChild(div);
+  }
+  function rebuildPlan(){
+    planEls.forEach(el=>el.innerHTML="");
+    state.plan.forEach((items,col)=> items.forEach((text,idx)=>renderPlanItem(col,text,idx)));
+  }
+  document.querySelectorAll("[data-plan]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const col = +btn.dataset.plan;
+      state.plan[col].push("");
+      rebuildPlan();
+      scheduleSave();
+    });
+  });
+  document.querySelectorAll(".plan-list").forEach(el=>{
+    el.addEventListener("input",(e)=>{
+      const t = e.target;
+      if(t.dataset.plancol !== undefined){
+        state.plan[+t.dataset.plancol][+t.dataset.planidx] = t.value;
+        scheduleSave();
+      }
+    });
+    el.addEventListener("click",(e)=>{
+      const rm = e.target.closest("[data-remove-plan]");
+      if(rm){
+        const [col,idx] = rm.dataset.removePlan.split(":").map(Number);
+        state.plan[col].splice(idx,1);
+        rebuildPlan();
+        scheduleSave();
+      }
+    });
+  });
+
+  // ---------- accordion ----------
+  document.querySelectorAll("[data-toggle]").forEach(head=>{
+    head.addEventListener("click", ()=>{
+      const section = head.closest(".section");
+      section.classList.toggle("open");
+      updateProgress();
+    });
+  });
+  document.querySelector(".section").classList.add("open"); // open first by default
+
+  // ---------- chip groups ----------
+  document.querySelectorAll("[data-chipgroup]").forEach(group=>{
+    group.addEventListener("click",(e)=>{
+      const chip = e.target.closest(".chip");
+      if(!chip) return;
+      const single = group.dataset.single === "true";
+      if(single){
+        group.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
+        chip.classList.add("active");
+        state[group.dataset.chipgroup] = chip.dataset.value;
+      } else {
+        chip.classList.toggle("active");
+        const vals = Array.from(group.querySelectorAll(".chip.active")).map(c=>c.dataset.value);
+        state[group.dataset.chipgroup] = vals;
+      }
+      scheduleSave();
+    });
+  });
+
+  // ---------- scale 1-5 ----------
+  document.querySelectorAll("[data-scale]").forEach(group=>{
+    group.addEventListener("click",(e)=>{
+      const dot = e.target.closest(".dot");
+      if(!dot) return;
+      group.querySelectorAll(".dot").forEach(d=>d.classList.remove("active"));
+      dot.classList.add("active");
+      state[group.dataset.scale] = dot.dataset.value;
+      scheduleSave();
+    });
+  });
+
+  // ---------- plain fields ----------
+  function bindPlainFields(){
+    document.querySelectorAll("[data-field]").forEach(el=>{
+      el.addEventListener("input", ()=>{
+        state[el.dataset.field] = el.value;
+        scheduleSave();
+      });
+    });
+    document.querySelectorAll("[data-journey]").forEach(el=>{
+      el.addEventListener("input", ()=>{
+        const stage = el.dataset.journey, jf = el.dataset.jfield;
+        if(!state.journey[stage]) state.journey[stage] = {};
+        state.journey[stage][jf] = el.value;
+        scheduleSave();
+      });
+    });
+  }
+  bindPlainFields();
+
+  // ---------- scoring ----------
+  const PILLARS = [
+    {key:"aquisicao", name:"Aquisição"},
+    {key:"onboarding", name:"Onboarding"},
+    {key:"retencao", name:"Retenção & churn"},
+    {key:"suporte", name:"Suporte & operação"},
+    {key:"diagnostico", name:"Diagnóstico (achados)"}
+  ];
+  const WEIGHTS = {aquisicao:15, onboarding:20, retencao:25, suporte:15, diagnostico:25};
+
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+  function num(v){ const n = parseFloat(v); return isNaN(n) ? null : n; }
+  function yn(v, yes=100, no=30){ return v==="Sim" ? yes : (v==="Não" ? no : null); }
+  function bandScore(v, bands){ // bands: [[maxValue, score], ...] ascending, last is fallback
+    if(v===null) return null;
+    for(const [max,score] of bands){ if(v<=max) return score; }
+    return bands[bands.length-1][1];
+  }
+  function weightedAvg(components){ // [[value|null, weight], ...]
+    const usable = components.filter(c=>c[0]!==null);
+    if(usable.length===0) return null;
+    const totalW = usable.reduce((s,c)=>s+c[1],0);
+    const sum = usable.reduce((s,c)=>s+c[0]*c[1],0);
+    return sum/totalW;
+  }
+
+  function scoreAquisicao(){
+    const conv = num(state.taxaConversaoComercial);
+    const convScore = conv===null ? null : clamp(conv*4,0,100);
+    return weightedAvg([[convScore,100]]);
+  }
+  function scoreOnboarding(){
+    const treino = yn(state.treinamento);
+    const acomp = yn(state.acompanhamento);
+    const tempo = bandScore(num(state.tempoPrimeiroValor), [[7,100],[14,75],[30,45],[9999,20]]);
+    return weightedAvg([[treino,30],[acomp,30],[tempo,40]]);
+  }
+  function scoreRetencao(){
+    const churn = bandScore(num(state.taxaChurn), [[2,100],[5,75],[10,45],[9999,15]]);
+    const retencao = yn(state.tentativaRetencao);
+    const nps = yn(state.pesquisaNPS);
+    return weightedAvg([[churn,50],[retencao,25],[nps,25]]);
+  }
+  function scoreSuporte(){
+    const proc = yn(state.processosFormais);
+    const sla = yn(state.sla);
+    const base = yn(state.baseConhecimento);
+    const tempo = bandScore(num(state.tempoResposta), [[4,100],[24,75],[48,45],[9999,15]]);
+    return weightedAvg([[proc,25],[sla,25],[base,20],[tempo,30]]);
+  }
+  function scoreDiagnostico(){
+    if(!state.diagRows || state.diagRows.length===0) return null;
+    let nCritico=0, nImportante=0;
+    state.diagRows.forEach(r=>{
+      if(r.prioridade==="critico") nCritico++;
+      else if(r.prioridade==="importante") nImportante++;
+    });
+    return clamp(100 - nCritico*20 - nImportante*8, 0, 100);
+  }
+
+  function computeScores(){
+    return {
+      aquisicao: scoreAquisicao(),
+      onboarding: scoreOnboarding(),
+      retencao: scoreRetencao(),
+      suporte: scoreSuporte(),
+      diagnostico: scoreDiagnostico()
+    };
+  }
+
+  function pillarColor(v){
+    if(v===null) return "var(--line)";
+    if(v>=75) return "var(--green)";
+    if(v>=45) return "var(--amber)";
+    return "var(--red)";
+  }
+
+  function renderScore(){
+    const scores = computeScores();
+    const components = PILLARS.map(p=>[scores[p.key], WEIGHTS[p.key]]);
+    const overall = weightedAvg(components);
+
+    const card = document.getElementById("scoreCard");
+    const numEl = document.getElementById("scoreNum");
+    const labelEl = document.getElementById("scoreLabel");
+    const descEl = document.getElementById("scoreDesc");
+    const ring = document.getElementById("scoreRing");
+    const pillarsEl = document.getElementById("scorePillars");
+
+    const answeredPillars = PILLARS.filter(p=>scores[p.key]!==null).length;
+
+    if(overall===null){
+      numEl.textContent = "–";
+      ring.setAttribute("stroke-dasharray","0 201");
+      labelEl.textContent = "Pontuação de saúde";
+      labelEl.className = "score-label";
+      descEl.textContent = "Preencha os campos do formulário para calcular a pontuação — quanto mais completo, mais precisa.";
+      pillarsEl.innerHTML = "";
+      return;
+    }
+
+    const rounded = Math.round(overall);
+    numEl.textContent = rounded;
+    const circumference = 2*Math.PI*32;
+    ring.setAttribute("stroke-dasharray", (circumference*rounded/100).toFixed(1)+" "+circumference.toFixed(1));
+    ring.style.stroke = pillarColor(rounded);
+
+    let labelClass, labelText, desc;
+    if(rounded>=75){ labelClass="ok"; labelText="🟢 Saudável"; desc="Os fundamentos de retenção e operação estão sólidos. Foco em escalar com consistência."; }
+    else if(rounded>=45){ labelClass="atn"; labelText="🟡 Atenção"; desc="Existem gargalos relevantes que, se não tratados, tendem a travar o crescimento."; }
+    else { labelClass="crit"; labelText="🔴 Crítico"; desc="Sinais de risco imediato — priorize as ações de 0–30 dias antes de investir em aquisição."; }
+    if(answeredPillars < PILLARS.length){ desc += " (baseado em "+answeredPillars+" de "+PILLARS.length+" áreas preenchidas)"; }
+
+    labelEl.textContent = labelText;
+    labelEl.className = "score-label "+labelClass;
+    descEl.textContent = desc;
+
+    pillarsEl.innerHTML = PILLARS.map(p=>{
+      const v = scores[p.key];
+      const pct = v===null ? 0 : Math.round(v);
+      const color = pillarColor(v);
+      const display = v===null ? "—" : pct;
+      return `<div class="pillar-row">
+        <div class="pillar-name">${p.name}</div>
+        <div class="pillar-track"><div class="pillar-fill" style="width:${pct}%; background:${color}"></div></div>
+        <div class="pillar-value">${display}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // ---------- progress ----------
+  function updateProgress(){
+    const sections = document.querySelectorAll("[data-section]");
+    let filled = 0;
+    sections.forEach(s=>{
+      const inputs = s.querySelectorAll("input[type=text], input[type=number], textarea");
+      const chips = s.querySelectorAll(".chip.active");
+      if(Array.from(inputs).some(i=>i.value.trim()!=="") || chips.length>0) filled++;
+    });
+    const pct = Math.round((filled/sections.length)*100);
+    document.getElementById("progressFill").style.width = pct+"%";
+  }
+
+  // ---------- save / load (com resiliência a falhas do storage) ----------
+  let saveTimer = null;
+  let saveInFlight = false;
+  let saveQueued = false;
+  let lastSaveFailed = false;
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function scheduleSave(){
+    const dot = document.getElementById("saveDot");
+    const txt = document.getElementById("saveText");
+    dot.classList.remove("error");
+    dot.classList.add("saving");
+    txt.textContent = "salvando…";
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(runSave, 1000);
+    updateProgress();
+    renderScore();
+  }
+
+  // evita chamadas simultâneas ao storage (uma por vez, com fila de 1)
+  async function runSave(){
+    if(saveInFlight){ saveQueued = true; return; }
+    saveInFlight = true;
+    const ok = await doSaveWithRetry();
+    saveInFlight = false;
+    updateSaveUI(ok);
+    if(saveQueued){
+      saveQueued = false;
+      await sleep(300);
+      runSave();
+    }
+  }
+
+  async function doSaveWithRetry(attempts=3){
+    const payload = JSON.stringify(state);
+    for(let i=1; i<=attempts; i++){
+      try{
+        await window.storage.set(STORAGE_KEY, payload, false);
+        return true;
+      }catch(err){
+        console.error("Falha ao salvar (tentativa "+i+"/"+attempts+")", err);
+        if(i<attempts) await sleep(600*i);
+      }
+    }
+    return false;
+  }
+
+  function updateSaveUI(ok){
+    const dot = document.getElementById("saveDot");
+    const txt = document.getElementById("saveText");
+    const retryBtn = document.getElementById("retrySave");
+    dot.classList.remove("saving");
+    if(ok){
+      lastSaveFailed = false;
+      dot.classList.remove("error");
+      const now = new Date();
+      txt.textContent = "salvo às " + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      retryBtn.style.display = "none";
+    } else {
+      lastSaveFailed = true;
+      dot.classList.add("error");
+      txt.textContent = "não foi possível salvar agora";
+      retryBtn.style.display = "inline";
+    }
+  }
+
+  document.getElementById("retrySave").addEventListener("click", async ()=>{
+    const dot = document.getElementById("saveDot");
+    const txt = document.getElementById("saveText");
+    dot.classList.add("saving");
+    txt.textContent = "tentando novamente…";
+    const ok = await doSaveWithRetry(3);
+    updateSaveUI(ok);
+  });
+
+  function priorityLabel(p){
+    if(p==="critico") return {cls:"critico", text:"🔴 Crítico"};
+    if(p==="importante") return {cls:"importante", text:"🟡 Importante"};
+    if(p==="oportunidade") return {cls:"oportunidade", text:"🟢 Oportunidade"};
+    return {cls:"", text:"—"};
+  }
+  function esc(s){
+    return (s===undefined||s===null||s==="") ? "" : String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function fmtDate(){
+    return new Date().toLocaleDateString('pt-BR');
+  }
+
+  function buildReportHTML(){
+    const scores = computeScores();
+    const components = PILLARS.map(p=>[scores[p.key], WEIGHTS[p.key]]);
+    const overall = weightedAvg(components);
+    const rounded = overall===null ? null : Math.round(overall);
+
+    let scoreLabelText = "Sem dados suficientes", scoreLabelClass = "";
+    let scoreDescText = "Preencha as seções do formulário para calcular a pontuação.";
+    if(rounded!==null){
+      if(rounded>=75){ scoreLabelClass="ok"; scoreLabelText="🟢 Saudável"; scoreDescText="Os fundamentos de retenção e operação estão sólidos. Foco em escalar com consistência."; }
+      else if(rounded>=45){ scoreLabelClass="atn"; scoreLabelText="🟡 Atenção"; scoreDescText="Existem gargalos relevantes que, se não tratados, tendem a travar o crescimento."; }
+      else { scoreLabelClass="crit"; scoreLabelText="🔴 Crítico"; scoreDescText="Sinais de risco imediato — priorize as ações de 0–30 dias antes de investir em aquisição."; }
+    }
+
+    const pillarsHTML = PILLARS.map(p=>{
+      const v = scores[p.key];
+      return `<div class="pr-pillar-mini"><span>${p.name}</span><b>${v===null?"—":Math.round(v)}</b></div>`;
+    }).join("");
+
+    let diagHTML;
+    if(!state.diagRows || state.diagRows.length===0){
+      diagHTML = `<p class="pr-empty">Nenhum problema classificado ainda.</p>`;
+    } else {
+      const rows = state.diagRows.map(r=>{
+        const tag = priorityLabel(r.prioridade);
+        return `<tr>
+          <td>${esc(r.problema)||"—"}</td>
+          <td>${esc(r.onde)||"—"}</td>
+          <td><span class="pr-tag ${tag.cls}">${tag.text}</span></td>
+        </tr>`;
+      }).join("");
+      diagHTML = `<table class="pr-table">
+        <tr><th>Problema identificado</th><th>Onde foi observado</th><th>Classificação</th></tr>
+        ${rows}
+      </table>`;
+    }
+
+    const planTitles = ["0–30 dias","31–60 dias","61–90 dias"];
+    const planHTML = `<div class="pr-plan-grid">${planTitles.map((title,i)=>{
+      const items = (state.plan && state.plan[i]) ? state.plan[i].filter(x=>x && x.trim()!=="") : [];
+      const li = items.length ? items.map(x=>`<li>${esc(x)}</li>`).join("") : `<li class="pr-empty" style="list-style:none; margin-left:-16px;">Nenhuma ação definida.</li>`;
+      return `<div class="pr-plan-col"><h3>${title}</h3><ul>${li}</ul></div>`;
+    }).join("")}</div>`;
+
+    const summaryFields = [
+      ["resumoProblemas","Principais problemas"],
+      ["resumoCausas","Possíveis causas"],
+      ["resumoImpacto","Impacto no negócio"],
+      ["resumoPrioridade","Prioridade geral"],
+      ["resumoRecomendacoes","Recomendações iniciais"],
+      ["resumoProximosPassos","Próximos passos"]
+    ];
+    const summaryHTML = summaryFields.map(([key,label])=>{
+      const val = state[key];
+      return `<div class="pr-summary-block"><h4>${label}</h4><p>${val && val.trim()!=="" ? esc(val) : '<span class="pr-empty">Não preenchido.</span>'}</p></div>`;
+    }).join("");
+
+    const metaParts = [];
+    if(state.fundador) metaParts.push("Fundador(a): "+esc(state.fundador));
+    if(state.cargo) metaParts.push(esc(state.cargo));
+    if(state.consultor) metaParts.push("Consultor(a): "+esc(state.consultor));
+    metaParts.push("Relatório gerado em "+fmtDate());
+
+    return `
+      <div class="pr-header">
+        <div class="pr-eyebrow">CONSULTORIA SAAS · RELATÓRIO DE DIAGNÓSTICO ESTRATÉGICO</div>
+        <h1>${esc(state.empresa) || "Empresa não informada"}</h1>
+        <div class="pr-meta">${metaParts.join(" · ")}</div>
+      </div>
+
+      <div class="pr-score">
+        <div class="pr-score-number">${rounded===null?"–":rounded}<span>/100</span></div>
+        <div class="pr-score-info">
+          <div class="pr-score-label ${scoreLabelClass}">${scoreLabelText}</div>
+          <div class="pr-score-desc">${scoreDescText}</div>
+          <div class="pr-pillars-mini">${pillarsHTML}</div>
+        </div>
+      </div>
+
+      <h2>Diagnóstico — problemas identificados</h2>
+      ${diagHTML}
+
+      <h2>Plano de ação</h2>
+      ${planHTML}
+
+      <h2>Resumo do diagnóstico</h2>
+      ${summaryHTML}
+
+      <div class="pr-footer">Documento gerado a partir do Formulário de Diagnóstico Estratégico — Consultoria SaaS.</div>
+    `;
+  }
+
+  function buildStandaloneReportDoc(){
+    const reportHTML = buildReportHTML();
+    const styles = Array.from(document.querySelectorAll("style")).map(s=>s.textContent).join("\n");
+    const empresaLabel = state.empresa ? state.empresa : "SaaS";
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório — Diagnóstico Estratégico — ${empresaLabel.replace(/</g,"&lt;")}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+${styles}
+body{background:#fff; padding:0; max-width:820px; margin:0 auto;}
+#printReport{display:block !important; padding:28px;}
+.rp-toolbar{
+  position:sticky; top:0; background:#fff; padding:12px 28px; margin-bottom:6px;
+  border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:8px;
+}
+.rp-toolbar span{font-size:12px; color:var(--ink-soft); font-family:'IBM Plex Sans',sans-serif;}
+.rp-print-btn{
+  background:var(--accent); color:#fff; border:none; padding:9px 18px; border-radius:20px;
+  font-family:'IBM Plex Sans',sans-serif; font-size:13px; cursor:pointer; font-weight:500;
+}
+.rp-print-btn:hover{opacity:.9;}
+@media print{ .rp-toolbar{display:none;} body{padding:0;} #printReport{padding:0;} }
+</style>
+</head>
+<body>
+  <div class="rp-toolbar">
+    <span>Pré-visualização do relatório — use o botão para salvar como PDF</span>
+    <button type="button" class="rp-print-btn" onclick="window.print()">🖨️ Imprimir / Salvar como PDF</button>
+  </div>
+  <div id="printReport">${reportHTML}</div>
+</body>
+</html>`;
+  }
+
+  function slugify(s){
+    return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"") || "saas";
+  }
+
+  document.getElementById("generateReport").addEventListener("click", ()=>{
+    // abre a aba ANTES de qualquer trabalho assíncrono, para preservar o gesto do usuário
+    // (evita bloqueio de pop-up) e para fugir do sandbox do iframe do artefato,
+    // onde window.print() costuma ser bloqueado.
+    const reportWin = window.open("", "_blank");
+    if(!reportWin){
+      alert("Não foi possível abrir a aba do relatório. Verifique se o navegador está bloqueando pop-ups para esta página e tente novamente — ou use o botão \"Baixar relatório (HTML)\".");
+      return;
+    }
+    const doc = reportWin.document;
+    doc.open();
+    doc.write(buildStandaloneReportDoc());
+    doc.close();
+  });
+
+  document.getElementById("downloadReport").addEventListener("click", ()=>{
+    const btn = document.getElementById("downloadReport");
+    try{
+      const html = buildStandaloneReportDoc();
+      const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "relatorio-diagnostico-" + slugify(state.empresa) + ".html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      const old = btn.textContent;
+      btn.textContent = "baixado ✓";
+      setTimeout(()=>{ btn.textContent = old; }, 1800);
+    }catch(err){
+      console.error("Falha ao baixar relatório", err);
+      alert("Não foi possível baixar o arquivo automaticamente. Use o botão \"Copiar backup\" como alternativa.");
+    }
+  });
+
+  document.getElementById("copyBackup").addEventListener("click", async ()=>{
+    const btn = document.getElementById("copyBackup");
+    const json = JSON.stringify(state, null, 2);
+    try{
+      await navigator.clipboard.writeText(json);
+      const old = btn.textContent;
+      btn.textContent = "copiado ✓";
+      setTimeout(()=>{ btn.textContent = old; }, 1800);
+    }catch(err){
+      // fallback: seleciona um textarea temporário
+      const ta = document.createElement("textarea");
+      ta.value = json;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try{ document.execCommand("copy"); btn.textContent = "copiado ✓"; }
+      catch(e){ btn.textContent = "não foi possível copiar"; }
+      document.body.removeChild(ta);
+      setTimeout(()=>{ btn.textContent = "📋 Copiar backup"; }, 1800);
+    }
+  });
+
+  // guarda-chuva: nunca deixa uma rejeição de storage aparecer como erro não tratado na tela
+  window.addEventListener("unhandledrejection", (e)=>{
+    if(e && e.reason){ console.error("Erro não tratado interceptado:", e.reason); }
+    e.preventDefault && e.preventDefault();
+  });
+
+  function applyStateToDOM(){
+    document.querySelectorAll("[data-field]").forEach(el=>{
+      if(state[el.dataset.field] !== undefined) el.value = state[el.dataset.field];
+    });
+    document.querySelectorAll("[data-journey]").forEach(el=>{
+      const stage = el.dataset.journey, jf = el.dataset.jfield;
+      if(state.journey[stage] && state.journey[stage][jf] !== undefined) el.value = state.journey[stage][jf];
+    });
+    document.querySelectorAll("[data-chipgroup]").forEach(group=>{
+      const key = group.dataset.chipgroup;
+      const val = state[key];
+      if(val === undefined) return;
+      if(group.dataset.single === "true"){
+        group.querySelectorAll(".chip").forEach(c=> c.classList.toggle("active", c.dataset.value===val));
+      } else if(Array.isArray(val)){
+        group.querySelectorAll(".chip").forEach(c=> c.classList.toggle("active", val.includes(c.dataset.value)));
+      }
+    });
+    document.querySelectorAll("[data-scale]").forEach(group=>{
+      const val = state[group.dataset.scale];
+      if(val===undefined) return;
+      group.querySelectorAll(".dot").forEach(d=>d.classList.toggle("active", d.dataset.value===val));
+    });
+    rebuildDiagRows();
+    rebuildPlan();
+    updateProgress();
+    renderScore();
+  }
+
+  async function load(){
+    const txt = document.getElementById("saveText");
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){
+        const loaded = JSON.parse(res.value);
+        state = Object.assign({journey:{}, diagRows:[], plan:[[],[],[]]}, loaded);
+      }
+      txt.textContent = state.empresa ? "dados carregados" : "pronto";
+    }catch(err){
+      // não havia dados salvos ainda, ou falha momentânea ao ler — segue com formulário em branco
+      txt.textContent = "pronto";
+    }
+    applyStateToDOM();
+    setTimeout(()=>{ if(!lastSaveFailed) document.getElementById("saveText").textContent = "pronto"; }, 1600);
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>#   c o n s u l t o r i a s a a s  
+ 
